@@ -1,0 +1,132 @@
+---
+title: "Homework Assignment 2"
+author: "Yusuf Uzhunnan"
+date: 'Due Sun Nov 08, 2020 11:59PM'
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+```{r}
+library(dplyr)
+library("ggplot2")
+```
+
+
+## HW-2 Instructions
+
+Consider yourself on a consulting assignment with the CitiBike program (aka the client). Your client has collected all this data but lack the analytical skills to explore/analyze/visualize the data - particularly because the data is pretty big in size. They have called you because they have heard that you are all experts in R and can make a ham sandwich out of Big Data in no time.
+
+1. Understand the data. Download all the monthly data and combine to create a 2019 year dataset. Explore the dataset to calculate descriptive statistics. Do exploratory visualization to better understand the dataset.
+
+2. Identify patterns in the ride history data. Explain/illustrate these patterns using appropriate visualization. This is purposely open ended. You are expected to pose interesting questions and answer them (e.g. does the ridership pattern differ between weekdays and weekends?)
+
+
+### Import Data
+
+```{r}
+# Read each Data File into its respective month's variable
+
+January <- read.csv("201901-citibike-tripdata.csv")
+February <- read.csv("201902-citibike-tripdata.csv")
+March <- read.csv("201903-citibike-tripdata.csv")
+April <- read.csv("201904-citibike-tripdata.csv")
+May <- read.csv("201905-citibike-tripdata.csv")
+June <- read.csv("201906-citibike-tripdata.csv")
+July <- read.csv("201907-citibike-tripdata.csv")
+August <- read.csv("201908-citibike-tripdata.csv")
+September <- read.csv("201909-citibike-tripdata.csv")
+October <- read.csv("201910-citibike-tripdata.csv")
+November <- read.csv("201911-citibike-tripdata.csv")
+December <- read.csv("201912-citibike-tripdata.csv")
+
+```
+
+
+```{r}
+# Combine into one variable
+
+total2019 <- rbind(January, February, March, April, May, June, July, August, September, October, November, December)
+
+# Take a 5% sample of dataset
+usedDataset <- sample_frac(total2019,.05)
+
+# Convert Gender to Factor
+usedDataset$gender <- as.factor(usedDataset$gender)
+
+
+```
+
+
+### Part 1: Data Exploration
+```{r}
+
+# Summary of Data
+summary(usedDataset)
+
+# Structure Data
+str(usedDataset)
+
+# Average trip duration
+mean(usedDataset$tripduration, na.rm = TRUE)
+
+# Number of Customers
+nrow(usedDataset[usedDataset$usertype == "Customer", ])
+
+# Number of Subscribers
+nrow(usedDataset[usedDataset$usertype == "Subscriber", ])
+
+# Barplot of number of subscribers vs customers
+
+subsVsCustomers <- table(usedDataset$usertype)
+
+barplot(subsVsCustomers, main="User Type Distribution",
+   xlab="Type of User")
+
+```
+
+
+### Part 2: Identifying Patterns
+
+Is there any correlation between the average age of users and the length of the trips they take?
+
+```{r}
+# Create new column for age of user
+usedDataset["age"] <- 2019 - usedDataset$birth.year
+
+#Create new column for duration in minutes
+usedDataset["tripdurationminutes"] <- usedDataset$tripduration/60
+
+# Create Scatter Plot
+ageVsTripLength <- ggplot(data=usedDataset, aes(x=age, y=tripdurationminutes, colour=usertype)) + geom_point(size=1, alpha=1)
+ageVsTripLength
+```
+Here we can see that there is not really a correlation between age and length of trip. It is all very randomly distributed. Another interested observation is that there are points where people are over the age of 100. This is very unlikely, so these was most likely input errors on the user's part. Another possible error is the trip durations, because some of the points show that some trips lasted tens of thousands of minutes. This could be because people fail to officially stop their ride, so the bike keeps counting up on its own even when the user is not using it.
+
+
+What does the distribution of user ages look like?
+```{r}
+ageDistribution <- table(usedDataset$age)
+
+barplot(ageDistribution, main="User Age Distribution",
+   xlab="Age")
+```
+
+If we look at the plot above, we can see that there is a weird outlier at around age 50. I am not sure why that is, but outside of that,it looks like the most common user is in their late twenties to early thirties. This makes sense, as NYC is a city with many young professionals.
+
+
+
+Is there a strong correlation between trip duration and location displacement?
+
+```{r}
+# Create new column for displacement
+usedDataset["distance"] <- sqrt(((usedDataset$end.station.latitude - usedDataset$start.station.latitude)^2) + ((usedDataset$end.station.longitude - usedDataset$start.station.longitude)^2))
+
+# Create Scatter Plot
+baseplotdisplacement <- ggplot(data=usedDataset, aes(x=tripdurationminutes, y=distance, colour=usertype)) + geom_point(size=2, alpha=1) + geom_smooth(method = "lm")
+baseplotdisplacement
+
+```
+
+Here we can see that there is an overall positive correlation between distance displaced and the tripduration. However, this isn't always necessarily the case. This is expected because displacement doesn't equal total distance traveled, and it also doesn't take different levels of traffic into account.
